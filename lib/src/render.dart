@@ -270,11 +270,41 @@ class GamePainter extends CustomPainter {
           ..strokeWidth = 3);
         if (m.skillWarn > 0) {
           final pulse = 0.6 + 0.4 * sin(game.time * 14);
-          canvas.drawCircle(o, 240 * pulse, Paint()..color = const Color(0x22FF5252));
-          canvas.drawCircle(o, 240 * pulse, Paint()
-            ..color = const Color(0x99FF5252)
+          if (m.warnRadius > 0) {
+            canvas.drawCircle(o, m.warnRadius * pulse,
+                Paint()..color = m.warnColor.withValues(alpha: 0.22));
+            canvas.drawCircle(o, m.warnRadius * pulse, Paint()
+              ..color = m.warnColor.withValues(alpha: 0.85)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.5);
+          } else if (m.kind == MonsterKind.wolf && m.skillIdx == 1) {
+            // 狼王扑击预警：指向玩家的方向线
+            final ang = atan2(game.player.y - m.y, game.player.x - m.x);
+            canvas.drawLine(o, o + Offset(cos(ang), sin(ang)) * 380, Paint()
+              ..color = const Color(0xFFFF8A65).withValues(alpha: 0.6)
+              ..strokeWidth = 6);
+          }
+        }
+        // 磐石护体（减伤）
+        if (m.stoneArmor > 0) {
+          canvas.drawCircle(o, m.radius + 6 + 2 * sin(game.time * 5), Paint()
+            ..color = const Color(0x5590CAF9)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5);
+            ..strokeWidth = 3);
+          _text(canvas, '磐石', Offset(m.x, m.y - m.radius - 26), 12,
+              const Color(0xFF90CAF9), stroke: const Color(0xAA000000));
+        }
+        // 幽灵王冰环扩散
+        if (m.iceRingR > 0) {
+          canvas.drawCircle(o, m.iceRingR, Paint()..color = const Color(0x3380DEEA));
+          canvas.drawCircle(o, m.iceRingR, Paint()
+            ..color = const Color(0xBB80DEEA)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4);
+        }
+        // 幽灵王瞬移残影
+        if (m.blinkT > 0) {
+          canvas.drawCircle(o, m.radius + 6, Paint()..color = const Color(0x55AB47BC));
         }
       } else if (m.isElite) {
         canvas.drawCircle(o, m.radius + 3, Paint()
@@ -380,10 +410,13 @@ class GamePainter extends CustomPainter {
   // ---------- 环绕剑 ----------
   void _drawOrbit(Canvas canvas) {
     final lv = game.player.weaponLevel(WeaponType.orbit);
-    if (lv <= 0) return;
-    final o = orbitParam(lv);
+    final holyLv = game.player.weaponLevel(WeaponType.holyOrbit);
+    if (lv <= 0 && holyLv <= 0) return;
+    final o = holyLv > 0 ? holyOrbitParam(holyLv) : orbitParam(lv);
+    final swordColor =
+        holyLv > 0 ? const Color(0xFFFFF59D) : const Color(0xFF9CCC65);
     canvas.drawCircle(Offset(game.player.x, game.player.y), o.radius, Paint()
-      ..color = const Color(0x119CCC65)
+      ..color = swordColor.withValues(alpha: 0.11)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5);
     final n = o.count;
@@ -396,7 +429,7 @@ class GamePainter extends CustomPainter {
       canvas.rotate(a + pi / 2);
       canvas.drawRRect(
           RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: 5, height: 16), const Radius.circular(2.5)),
-          Paint()..color = const Color(0xFF9CCC65));
+          Paint()..color = swordColor);
       canvas.restore();
     }
   }

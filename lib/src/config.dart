@@ -3,6 +3,9 @@ import 'dart:ui';
 
 // ============ 全局平衡数值表 ============
 
+// 存档结构版本号（改存档结构时递增并补充迁移逻辑）
+const int kSaveVersion = 2;
+
 // 玩家基础属性
 const double kPlayerHp = 100;
 const double kPlayerSpeed = 230;
@@ -34,7 +37,7 @@ const List<Color> kRarityColors = [
 const List<String> kRarityNames = ['普通', '稀有', '史诗', '传说'];
 
 // 武器类型
-enum WeaponType { bolt, orbit, axe, lightning, aura, frost, homing, holy, laser, thorns, scythe, venom, gun, staff, blade, sword, fists }
+enum WeaponType { bolt, orbit, axe, lightning, aura, frost, homing, holy, laser, thorns, scythe, venom, gun, staff, blade, sword, fists, frostBolt, gatling, giantAxe, holyOrbit, storm }
 
 class WeaponDef {
   final String name;
@@ -63,7 +66,31 @@ const Map<WeaponType, WeaponDef> weaponDefs = {
   WeaponType.blade: WeaponDef('回旋飞刀', '投出往返的回旋飞刀', Color(0xFF80CBC4), 10, 2),
   WeaponType.sword: WeaponDef('剑气斩', '斩出穿透的月牙剑气', Color(0xFFB39DDB), 10, 2),
   WeaponType.fists: WeaponDef('铁拳', '左右交替重拳连打', Color(0xFFFF8A65), 10, 0),
+  // ===== 进化武器（满级基础武器 + 指定被动合成）=====
+  WeaponType.frostBolt: WeaponDef('寒冰飞弹', '魔法飞弹进化：命中附带冰冻减速', Color(0xFF4DD0E1), 10, 3),
+  WeaponType.gatling: WeaponDef('加特林', '火枪进化：极限连射', Color(0xFF90CAF9), 10, 3),
+  WeaponType.giantAxe: WeaponDef('巨斧', '战斧进化：超大范围斩击', Color(0xFFEF5350), 10, 3),
+  WeaponType.holyOrbit: WeaponDef('圣剑环绕', '飞剑进化：圣光环绕', Color(0xFFFFF59D), 10, 3),
+  WeaponType.storm: WeaponDef('风暴闪电', '闪电进化：天罚连闪', Color(0xFFFFEE58), 10, 3),
 };
+
+// 武器进化配方：满级武器 + 指定被动等级 → 合成进化武器
+class EvolutionRecipe {
+  final WeaponType baseWeapon;
+  final int baseLevel;
+  final PassiveType passive;
+  final int passiveLevel;
+  final WeaponType result;
+  const EvolutionRecipe(this.baseWeapon, this.baseLevel, this.passive, this.passiveLevel, this.result);
+}
+
+const List<EvolutionRecipe> evolutions = [
+  EvolutionRecipe(WeaponType.bolt, 10, PassiveType.crit, 3, WeaponType.frostBolt),
+  EvolutionRecipe(WeaponType.gun, 10, PassiveType.haste, 3, WeaponType.gatling),
+  EvolutionRecipe(WeaponType.axe, 10, PassiveType.area, 3, WeaponType.giantAxe),
+  EvolutionRecipe(WeaponType.orbit, 10, PassiveType.power, 3, WeaponType.holyOrbit),
+  EvolutionRecipe(WeaponType.lightning, 10, PassiveType.critDmg, 3, WeaponType.storm),
+];
 
 // 武器参数：按等级公式计算（伤害约 +15%/级，间隔递减；满级 10 星有觉醒加成）
 double _pow(double base, double g, int lv) =>
@@ -184,6 +211,32 @@ FistsParam fistsParam(int lv) => FistsParam(
     _pow(11, 1.15, lv),
     90 + 5.0 * (lv - 1),
     _clampD(0.4 * math.pow(0.95, lv - 1).toDouble(), 0.2, 0.4));
+
+// ===== 进化武器参数（复用基础武器结构 + 增益）=====
+BoltParam frostBoltParam(int lv) {
+  final p = boltParam(lv);
+  return BoltParam(p.dmg * 1.7, p.interval, p.speed, p.count, p.pierce, lv);
+}
+
+GunParam gatlingParam(int lv) {
+  final p = gunParam(lv);
+  return GunParam(p.dmg * 1.5, p.interval * 0.7, p.speed, lv);
+}
+
+AxeParam giantAxeParam(int lv) {
+  final p = axeParam(lv);
+  return AxeParam(p.dmg * 1.7, p.radius * 1.45, p.interval);
+}
+
+OrbitParam holyOrbitParam(int lv) {
+  final p = orbitParam(lv);
+  return OrbitParam(p.dmg * 1.6, p.count + 2, p.radius, p.angSpeed);
+}
+
+LightningParam stormParam(int lv) {
+  final p = lightningParam(lv);
+  return LightningParam(p.dmg * 1.6, p.range, p.chainRange, p.chains + 2, p.interval);
+}
 
 // 被动类型
 enum PassiveType { hp, speed, power, haste, crit, lifesteal, magnet, regen, wealth, area, evade, critDmg, stun, explode }
@@ -361,6 +414,20 @@ const double kHasteAtkMult = 0.7; // 攻速乘数（小于 1 更快）
 const double kSpeedBuffMult = 1.25;
 const int kAdCoinsReward = 120; // 看广告获得金币数
 const int kRevivePerRun = 1; // 每局可看广告复活的次数
+
+// 每日挑战（每天重置；target 单位：击杀数/等级/分钟）
+class DailyChallengeDef {
+  final String name;
+  final String desc;
+  final int target;
+  final int reward;
+  const DailyChallengeDef(this.name, this.desc, this.target, this.reward);
+}
+const List<DailyChallengeDef> dailyChallenges = [
+  DailyChallengeDef('猎杀', '本日累计击杀怪物', 300, 200),
+  DailyChallengeDef('登峰', '本日达到的最高等级', 20, 150),
+  DailyChallengeDef('生存', '本日累计存活分钟', 15, 200),
+];
 
 // 弓箭手（远程怪）
 const double kArcherRange = 320;

@@ -9,13 +9,21 @@ abstract class AdService {
   Future<bool> showRewarded(AdReward reward);
 }
 
-/// 占位实现：模拟观看 1 秒后视为完成。
+/// 占位实现：模拟观看一段延迟后视为完成。
+/// 可配置延迟与是否成功，便于演示/测试。
 /// TODO(抖音小游戏): 替换为抖音激励视频广告 SDK 调用。
 class DummyAdService implements AdService {
+  final Duration delay;
+  final bool succeed;
+  const DummyAdService({
+    this.delay = const Duration(seconds: 1),
+    this.succeed = true,
+  });
+
   @override
   Future<bool> showRewarded(AdReward reward) async {
-    await Future<void>.delayed(const Duration(seconds: 1));
-    return true;
+    await Future<void>.delayed(delay);
+    return succeed;
   }
 }
 

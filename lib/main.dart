@@ -58,6 +58,9 @@ class _GameScreenState extends State<GameScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AudioManager.I.init();
+    AudioManager.I.enabled = game.settings.sound;
+    AudioManager.I.sfxVolume = game.settings.sfxVolume;
+    AudioManager.I.bgmVolume = game.settings.bgmVolume;
     _ticker = createTicker(_onTick);
     _ticker.start();
   }
@@ -174,7 +177,17 @@ class _GameScreenState extends State<GameScreen>
   void _openStatus() => showStatusDialog(context, game);
 
   void _toggleSound() {
-    AudioManager.I.enabled = !AudioManager.I.enabled;
+    game.settings.sound = !game.settings.sound;
+    AudioManager.I.enabled = game.settings.sound;
+    game.saveMeta();
+    setState(() {});
+  }
+
+  void _openSettings() {
+    showSettingsDialog(context, game);
+    AudioManager.I.sfxVolume = game.settings.sfxVolume;
+    AudioManager.I.bgmVolume = game.settings.bgmVolume;
+    AudioManager.I.enabled = game.settings.sound;
     setState(() {});
   }
 
@@ -289,7 +302,8 @@ class _GameScreenState extends State<GameScreen>
             Positioned.fill(
                 child: PausePanel(game,
                     onResume: togglePause, onRetry: _retry, onMenu: _toMenu,
-                    onAdItem: _adItem, onSkills: _openSkills, onStatus: _openStatus)),
+                    onAdItem: _adItem, onSkills: _openSkills, onStatus: _openStatus,
+                    onSettings: _openSettings)),
           if (phase == GamePhase.gameover)
             Positioned.fill(
                 child: GameOverPanel(game,

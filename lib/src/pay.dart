@@ -6,13 +6,16 @@ abstract class PaymentService {
   Future<bool> purchaseMonthlyCard();
 }
 
-/// 占位实现：模拟支付成功。
-/// TODO: 替换为真实支付 SDK。
+/// 占位实现：模拟支付结果。
+/// TODO: 替换为真实支付 SDK（抖音/微信/支付宝）。
 class DummyPaymentService implements PaymentService {
+  final bool succeed;
+  const DummyPaymentService({this.succeed = true});
+
   @override
   Future<bool> purchaseMonthlyCard() async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
-    return true;
+    return succeed;
   }
 }
 

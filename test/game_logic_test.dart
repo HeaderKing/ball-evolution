@@ -210,4 +210,16 @@ void main() {
     expect(g.reviveLeft, 0);
     expect(g.monsters, isEmpty);
   });
+
+  test('武器进化：合成后基础武器被取代并获进化武器', () {
+    final g = GameState()..startNewRun();
+    g.player.weapons[WeaponType.bolt] = 10;
+    final ev = evolutions.first;
+    expect(ev.baseWeapon, WeaponType.bolt);
+    expect(ev.result, WeaponType.frostBolt);
+    g.applyChoice(UpgradeChoice.evolve(ev));
+    expect(g.phase, GamePhase.playing);
+    expect(g.player.weaponLevel(WeaponType.bolt), 0); // 基础武器被取代
+    expect(g.player.weaponLevel(WeaponType.frostBolt), 1); // 获得进化武器
+  });
 }

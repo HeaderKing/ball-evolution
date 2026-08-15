@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'audio.dart';
 import 'config.dart';
 import 'entities.dart';
 import 'input.dart';
@@ -187,6 +188,72 @@ class _WeaponIconPainter extends CustomPainter {
           canvas.drawCircle(c + Offset(math.cos(a), math.sin(a)) * w * 0.18, w * 0.08, f);
         }
         break;
+      case WeaponType.frostBolt:
+        canvas.drawCircle(c - Offset(w * 0.3, 0), w * 0.14, f);
+        canvas.drawCircle(c, w * 0.2, f);
+        canvas.drawLine(c - Offset(w * 0.42, 0), c, s()..strokeWidth = w / 7);
+        for (int i = 0; i < 3; i++) {
+          final a = i * math.pi / 3 + math.pi / 6;
+          canvas.drawLine(
+              c + Offset(math.cos(a) * w * 0.26, math.sin(a) * w * 0.26),
+              c + Offset(math.cos(a) * w * 0.46, math.sin(a) * w * 0.46), s());
+        }
+        break;
+      case WeaponType.gatling:
+        canvas.drawRRect(
+            RRect.fromRectAndRadius(
+                Rect.fromCenter(center: c, width: w * 0.66, height: w * 0.26),
+                Radius.circular(w * 0.1)),
+            f);
+        canvas.drawLine(Offset(c.dx + w * 0.33, c.dy - w * 0.08),
+            Offset(c.dx + w * 0.5, c.dy - w * 0.08), s()..strokeWidth = w / 10);
+        canvas.drawLine(Offset(c.dx + w * 0.33, c.dy + w * 0.08),
+            Offset(c.dx + w * 0.5, c.dy + w * 0.08), s()..strokeWidth = w / 10);
+        break;
+      case WeaponType.giantAxe:
+        final gh = Path()
+          ..moveTo(c.dx, c.dy - w * 0.42)
+          ..lineTo(c.dx + w * 0.36, c.dy - w * 0.26)
+          ..lineTo(c.dx + w * 0.4, c.dy + w * 0.18)
+          ..quadraticBezierTo(c.dx + w * 0.18, c.dy + w * 0.34, c.dx, c.dy + w * 0.26)
+          ..quadraticBezierTo(c.dx - w * 0.18, c.dy + w * 0.34, c.dx - w * 0.4, c.dy + w * 0.18)
+          ..lineTo(c.dx - w * 0.36, c.dy - w * 0.26)
+          ..close();
+        canvas.drawPath(gh, f);
+        canvas.drawLine(Offset(c.dx, c.dy + w * 0.26), Offset(c.dx + w * 0.1, c.dy + w * 0.46),
+            s()..strokeWidth = w / 9);
+        break;
+      case WeaponType.holyOrbit:
+        final hb = Path()
+          ..moveTo(c.dx, c.dy - w * 0.46)
+          ..lineTo(c.dx + w * 0.14, c.dy + w * 0.02)
+          ..lineTo(c.dx - w * 0.14, c.dy + w * 0.02)
+          ..close();
+        canvas.drawPath(hb, f);
+        canvas.drawLine(Offset(c.dx - w * 0.22, c.dy + w * 0.04), Offset(c.dx + w * 0.22, c.dy + w * 0.04),
+            s()..strokeWidth = w / 14);
+        canvas.drawLine(Offset(c.dx, c.dy + w * 0.04), Offset(c.dx, c.dy + w * 0.26),
+            s()..strokeWidth = w / 12);
+        canvas.drawCircle(c, w * 0.34, Paint()
+          ..color = color.withValues(alpha: 0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w / 16);
+        canvas.drawLine(c - Offset(w * 0.12, 0), c + Offset(w * 0.12, 0), s()..strokeWidth = w / 18);
+        canvas.drawLine(c - Offset(0, w * 0.12), c + Offset(0, w * 0.12), s()..strokeWidth = w / 18);
+        break;
+      case WeaponType.storm:
+        final sp = Path()
+          ..moveTo(c.dx + w * 0.18, c.dy - w * 0.42)
+          ..lineTo(c.dx - w * 0.24, c.dy + w * 0.12)
+          ..lineTo(c.dx + w * 0.02, c.dy + w * 0.12)
+          ..lineTo(c.dx - w * 0.18, c.dy + w * 0.42)
+          ..lineTo(c.dx + w * 0.24, c.dy - w * 0.12)
+          ..lineTo(c.dx - w * 0.02, c.dy - w * 0.12)
+          ..close();
+        canvas.drawPath(sp, f);
+        canvas.drawLine(c - Offset(w * 0.16, w * 0.3), c + Offset(w * 0.16, w * 0.3),
+            s()..strokeWidth = w / 14);
+        break;
     }
   }
 
@@ -248,6 +315,62 @@ class _JoyPainter extends CustomPainter {
 }
 
 // ============ HUD ============
+// ============ 小地图 ============
+class MiniMap extends StatelessWidget {
+  final GameState game;
+  const MiniMap(this.game, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 104,
+      height: 104,
+      decoration: BoxDecoration(
+        color: const Color(0x9910141D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x557E57C2)),
+      ),
+      child: CustomPaint(painter: _MiniMapPainter(game)),
+    );
+  }
+}
+
+class _MiniMapPainter extends CustomPainter {
+  final GameState game;
+  _MiniMapPainter(this.game);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final range = math.max(game.viewW, game.viewH) * 0.75;
+    final scale = (w / 2) / range;
+    Offset toMap(double x, double y) => Offset(
+        w / 2 + (x - game.player.x) * scale,
+        h / 2 + (y - game.player.y) * scale);
+
+    final normal = Paint()..color = const Color(0xFFEF5350);
+    final elite = Paint()..color = const Color(0xFF40C4FF);
+    for (final m in game.monsters) {
+      if (m.dead) continue;
+      final p = toMap(m.x, m.y);
+      if (p.dx < -6 || p.dx > w + 6 || p.dy < -6 || p.dy > h + 6) continue;
+      if (m.isBoss) {
+        canvas.drawCircle(p, 5, Paint()..color = const Color(0xFFFF5252));
+        canvas.drawCircle(p, 3, Paint()..color = const Color(0xFFFFD54F));
+      } else if (m.isElite) {
+        canvas.drawCircle(p, 3, elite);
+      } else {
+        canvas.drawCircle(p, 2, normal);
+      }
+    }
+    canvas.drawCircle(toMap(game.player.x, game.player.y), 3,
+        Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniMapPainter old) => true;
+}
+
 class Hud extends StatelessWidget {
   final GameState game;
   final VoidCallback onPause;
@@ -335,6 +458,7 @@ class Hud extends StatelessWidget {
               _statusButton(context),
             ]),
           ),
+          Positioned(top: 84, right: 12, child: MiniMap(game)),
           Positioned(
             bottom: 12,
             right: 12,
@@ -655,6 +779,12 @@ class UpgradePanel extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(color: rc, fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
+                  if (c.kind == ChoiceKind.evolve) ...[
+                    const SizedBox(height: 4),
+                    Text('★ 武器进化',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: rc, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
                   const SizedBox(height: 6),
                   Text(c.description(),
                       textAlign: TextAlign.center,
@@ -678,8 +808,9 @@ class PausePanel extends StatelessWidget {
   final VoidCallback onAdItem;
   final VoidCallback onSkills;
   final VoidCallback onStatus;
+  final VoidCallback onSettings;
   const PausePanel(this.game,
-      {super.key, required this.onResume, required this.onRetry, required this.onMenu, required this.onAdItem, required this.onSkills, required this.onStatus});
+      {super.key, required this.onResume, required this.onRetry, required this.onMenu, required this.onAdItem, required this.onSkills, required this.onStatus, required this.onSettings});
 
   @override
   Widget build(BuildContext context) {
@@ -699,6 +830,8 @@ class PausePanel extends StatelessWidget {
       const SizedBox(height: 10),
       _btn('查看状态', () => onStatus(), dark: true),
       const SizedBox(height: 10),
+      _btn('设置', () => onSettings(), dark: true),
+      const SizedBox(height: 10),
       _btn('返回主菜单', () => onMenu(), dark: true),
     ]));
   }
@@ -716,6 +849,8 @@ class GameOverPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = game.meta;
+    final topDmg = game.weaponDmg.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return _scrim(Column(mainAxisSize: MainAxisSize.min, children: [
       const Text('你死了', style: TextStyle(color: Color(0xFFFF5252), fontSize: 40, fontWeight: FontWeight.bold)),
       const SizedBox(height: 6),
@@ -732,8 +867,16 @@ class GameOverPanel extends StatelessWidget {
           _row('击杀', '${game.kills}'),
           _row('达到等级', 'Lv.${game.player.level}'),
           _row('本局金币', '+${game.gold.round()}'),
+          _row('最长连杀', '${game.bestCombo}'),
           _row('最佳等级', 'Lv.${m.bestLevel}'),
           _row('最佳存活', fmtTime(m.bestTime)),
+          if (topDmg.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('本局伤害 TOP',
+                style: TextStyle(color: Color(0xFF90A4AE), fontSize: 13, fontWeight: FontWeight.bold)),
+            for (final e in topDmg.take(3))
+              _row(weaponDefs[e.key]!.name, e.value.toStringAsFixed(0)),
+          ],
         ]),
       ),
       const SizedBox(height: 20),
@@ -1015,6 +1158,29 @@ class MenuPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text('最佳 Lv.${m.bestLevel} · 最佳 ${fmtTime(m.bestTime)}',
               style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 14)),
+          if (!m.seenTutorial) ...[
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () => _showHelp(context),
+              child: Container(
+                width: 320,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0x227E57C2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF7E57C2)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.help_outline, color: Color(0xFFB39DDB)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('首次游玩？点此查看操作说明',
+                        style: TextStyle(color: Colors.white, fontSize: 13)),
+                  ),
+                ]),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           _btn('新游戏', () => onStart()),
           if (game.hasRun()) ...[
@@ -1026,7 +1192,13 @@ class MenuPanel extends StatelessWidget {
           const SizedBox(height: 10),
           _btn('技能图鉴', () => _showSkillBook(context), dark: true),
           const SizedBox(height: 10),
+          _btn('怪物图鉴', () => showMonsterBookDialog(context, game), dark: true),
+          const SizedBox(height: 10),
           _btn('皮肤', () => _showSkins(context), dark: true),
+          const SizedBox(height: 10),
+          _btn('操作帮助', () => _showHelp(context), dark: true),
+          const SizedBox(height: 10),
+          _btn('每日挑战', () => showChallengeDialog(context, game), dark: true),
           const SizedBox(height: 20),
           Row(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.monetization_on, size: 16, color: Color(0xFFFFC400)),
@@ -1041,6 +1213,12 @@ class MenuPanel extends StatelessWidget {
         ]),
       ),
     );
+  }
+
+  void _showHelp(BuildContext context) {
+    game.meta.seenTutorial = true; // 看过帮助即不再显示首局提示
+    game.saveMeta();
+    showHelpDialog(context);
   }
 
   void _showMetaUpgrades(BuildContext context) {
@@ -1328,6 +1506,21 @@ List<(String, String)> weaponStats(WeaponType w, int lv) {
     case WeaponType.fists:
       final p = fistsParam(lv);
       return [('伤害', p.dmg.toStringAsFixed(0)), ('半径', '${p.radius.round()}'), ('间隔', '${p.interval.toStringAsFixed(2)}s')];
+    case WeaponType.frostBolt:
+      final p = frostBoltParam(lv);
+      return [('伤害', p.dmg.toStringAsFixed(0)), ('弹数', '${p.count}'), ('穿透', '${p.pierce}'), ('效果', '冰冻减速')];
+    case WeaponType.gatling:
+      final p = gatlingParam(lv);
+      return [('伤害', p.dmg.toStringAsFixed(0)), ('间隔', '${p.interval.toStringAsFixed(2)}s'), ('连发', '2-3'), ('穿透', '1')];
+    case WeaponType.giantAxe:
+      final p = giantAxeParam(lv);
+      return [('伤害', p.dmg.toStringAsFixed(0)), ('半径', '${p.radius.round()}'), ('间隔', '${p.interval.toStringAsFixed(2)}s')];
+    case WeaponType.holyOrbit:
+      final p = holyOrbitParam(lv);
+      return [('伤害', p.dmg.toStringAsFixed(0)), ('剑数', '${p.count}'), ('半径', '${p.radius.round()}')];
+    case WeaponType.storm:
+      final p = stormParam(lv);
+      return [('伤害', p.dmg.toStringAsFixed(0)), ('范围', '${p.range.round()}'), ('链数', '${p.chains}')];
   }
 }
 
@@ -1408,6 +1601,24 @@ class _SkillDetailViewState extends State<_SkillDetailView> {
             else
               Text('当前增幅：${passiveBonusInfo(p!, lv)}',
                   style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 13)),
+            if (w != null)
+              for (final ev in evolutions)
+                if (ev.baseWeapon == w)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0x22FFD54F),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0x55FFD54F)),
+                      ),
+                      child: Text(
+                          '★ 进化路径\n${weaponDefs[ev.baseWeapon]!.name} 满级 + ${passiveDefs[ev.passive]!.name} Lv.${ev.passiveLevel} → ${weaponDefs[ev.result]!.name}',
+                          style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 12)),
+                    ),
+                  ),
           ]),
         ),
       ]),
@@ -1486,4 +1697,314 @@ Widget _adBtn(String text, VoidCallback onTap) {
       ),
     ),
   );
+}
+
+// ============ 设置 ============
+void showMonsterBookDialog(BuildContext context, GameState game) {
+  final seen = game.meta.seenMonsters.toSet();
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF141824),
+      title: Text('怪物图鉴 ${seen.length}/${MonsterKind.values.length}',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      content: SizedBox(
+        width: 380,
+        child: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            for (final k in MonsterKind.values) _monsterCard(k, seen.contains(k.index)),
+          ]),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('关闭', style: TextStyle(color: Color(0xFF90CAF9))),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _monsterCard(MonsterKind k, bool unlocked) {
+  final def = monsterDefs[k]!;
+  final isBoss = k == MonsterKind.golem || k == MonsterKind.wolf || k == MonsterKind.ghost;
+  return Container(
+    margin: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: const Color(0x661A1E29),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(
+          color: unlocked ? def.color.withValues(alpha: 0.6) : const Color(0x33455555)),
+    ),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: unlocked ? def.color.withValues(alpha: 0.3) : const Color(0xFF2A3040),
+          border: Border.all(color: unlocked ? def.color : const Color(0xFF455A64)),
+        ),
+        child: Icon(unlocked ? Icons.circle : Icons.help_outline,
+            size: 16, color: unlocked ? def.color : const Color(0xFF78909C)),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(unlocked ? '${def.name}${isBoss ? ' [BOSS]' : ''}' : '？？？',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 2),
+          if (unlocked)
+            Text('HP ${def.hp.round()} · 速度 ${def.speed.round()} · 伤害 ${def.damage} · 经验 ${def.xp} · 金币 ${def.gold}',
+                style: const TextStyle(color: Color(0xFF90A4AE), fontSize: 11))
+          else
+            const Text('击杀后解锁', style: TextStyle(color: Color(0xFF78909C), fontSize: 11)),
+          if (unlocked && isBoss)
+            for (final bs in bossSkills[k] ?? const [])
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('· ${bs.name}：${bs.desc}',
+                    style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 11)),
+              ),
+        ]),
+      ),
+    ]),
+  );
+}
+
+void showChallengeDialog(BuildContext context, GameState game) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF141824),
+      title: const Text('每日挑战',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      content: SizedBox(
+        width: 340,
+        child: StatefulBuilder(
+          builder: (context, setState) => SingleChildScrollView(
+            child: Column(children: [
+              for (int i = 0; i < dailyChallenges.length; i++)
+                _challengeCard(context, setState, game, i),
+            ]),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('关闭', style: TextStyle(color: Color(0xFF90CAF9))),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _challengeCard(
+    BuildContext context, StateSetter setState, GameState game, int i) {
+  final def = dailyChallenges[i];
+  final prog = game.challengeProgress(i);
+  final done = game.meta.challengeDone[i] == 1;
+  final met = prog >= def.target;
+  final ratio = (prog / def.target).clamp(0.0, 1.0).toDouble();
+  final unit = def.name == '生存' ? ' 分钟' : '';
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: const Color(0x661A1E29),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(
+          color: done
+              ? const Color(0x66FFD54F)
+              : met
+                  ? const Color(0x6666BB6A)
+                  : const Color(0x33222A3A)),
+    ),
+    child: Row(children: [
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${def.name}（${def.desc}）',
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('$prog/${def.target}$unit',
+              style: TextStyle(
+                  color: met ? const Color(0xFF66BB6A) : const Color(0xFFB0BEC5),
+                  fontSize: 12)),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 6,
+              backgroundColor: const Color(0xFF2A3040),
+              valueColor: AlwaysStoppedAnimation(
+                  met ? const Color(0xFF66BB6A) : const Color(0xFF7E57C2)),
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(width: 10),
+      if (done)
+        const Text('已领取',
+            style: TextStyle(color: Color(0xFFFFD54F), fontSize: 12, fontWeight: FontWeight.bold))
+      else
+        SizedBox(
+          height: 34,
+          child: FilledButton(
+            onPressed: met
+                ? () {
+                    if (game.buyChallenge(i)) setState(() {});
+                  }
+                : null,
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF7E57C2),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFF2A3040)),
+            child: Text('+${def.reward} 金币', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ),
+    ]),
+  );
+}
+
+void showHelpDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF141824),
+      title: const Text('操作说明',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      content: const SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('移动', style: TextStyle(color: Color(0xFF90CAF9), fontWeight: FontWeight.bold, fontSize: 15)),
+            SizedBox(height: 4),
+            Text('桌面：鼠标跟随光标移动\n移动端：屏幕下方虚拟方向盘\n键盘：WASD / 方向键',
+                style: TextStyle(color: Color(0xFFB0BEC5), fontSize: 13)),
+            SizedBox(height: 14),
+            Text('战斗', style: TextStyle(color: Color(0xFF90CAF9), fontWeight: FontWeight.bold, fontSize: 15)),
+            SizedBox(height: 4),
+            Text('武器自动攻击，无需手动操作\n升级三选一：武器 / 被动 / 回血\n武器满级 + 指定被动 → 进化新武器',
+                style: TextStyle(color: Color(0xFFB0BEC5), fontSize: 13)),
+            SizedBox(height: 14),
+            Text('界面', style: TextStyle(color: Color(0xFF90CAF9), fontWeight: FontWeight.bold, fontSize: 15)),
+            SizedBox(height: 4),
+            Text('左上角：HP / 经验 / 金币\n右上角：技能与状态\n暂停：查看技能 / 状态 / 设置',
+                style: TextStyle(color: Color(0xFFB0BEC5), fontSize: 13)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('知道了', style: TextStyle(color: Color(0xFF90CAF9))),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> showSettingsDialog(BuildContext context, GameState game) async {
+  await showDialog(
+    context: context,
+    builder: (_) => _SettingsView(game: game),
+  );
+}
+
+class _SettingsView extends StatefulWidget {
+  final GameState game;
+  const _SettingsView({required this.game});
+  @override
+  State<_SettingsView> createState() => _SettingsViewState();
+}
+
+class _SettingsViewState extends State<_SettingsView> {
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.game.settings;
+    return AlertDialog(
+      backgroundColor: const Color(0xF21A1E29),
+      title: const Text('设置',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _volumeRow('音效音量', s.sfxVolume, (v) {
+              setState(() => s.sfxVolume = v);
+              _applyAudio();
+            }),
+            _volumeRow('音乐音量', s.bgmVolume, (v) {
+              setState(() => s.bgmVolume = v);
+              _applyAudio();
+            }),
+            const Divider(color: Color(0x33222A3A), height: 20),
+            _switchRow('声音', s.sound, (v) {
+              setState(() => s.sound = v);
+              _applyAudio();
+            }),
+            _switchRow('手机震动', s.vibration, (v) => setState(() => s.vibration = v)),
+            _switchRow('屏幕震动', s.screenShake, (v) => setState(() => s.screenShake = v)),
+            _switchRow('打击顿帧', s.hitStop, (v) => setState(() => s.hitStop = v)),
+            _switchRow('伤害数字', s.damageNumbers, (v) => setState(() => s.damageNumbers = v)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            widget.game.saveMeta();
+            Navigator.pop(context);
+          },
+          child: const Text('完成', style: TextStyle(color: Color(0xFF90CAF9), fontSize: 16)),
+        ),
+      ],
+    );
+  }
+
+  void _applyAudio() {
+    AudioManager.I.sfxVolume = widget.game.settings.sfxVolume;
+    AudioManager.I.bgmVolume = widget.game.settings.bgmVolume;
+    AudioManager.I.enabled = widget.game.settings.sound;
+  }
+
+  Widget _volumeRow(String label, double value, ValueChanged<double> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        SizedBox(width: 90, child: Text(label, style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 14))),
+        Expanded(
+          child: Slider(
+            value: value,
+            activeColor: const Color(0xFF7E57C2),
+            onChanged: onChanged,
+          ),
+        ),
+        SizedBox(width: 34, child: Text('${(value * 100).round()}%',
+            style: const TextStyle(color: Color(0xFF90A4AE), fontSize: 12))),
+      ]),
+    );
+  }
+
+  Widget _switchRow(String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        SizedBox(width: 150, child: Text(label, style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 14))),
+        const Spacer(),
+        Switch(
+          value: value,
+          activeTrackColor: const Color(0xFF7E57C2),
+          onChanged: onChanged,
+        ),
+      ]),
+    );
+  }
 }

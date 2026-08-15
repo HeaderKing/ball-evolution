@@ -106,6 +106,14 @@ class Monster {
   double weakT = 0; // Boss 虚弱（受伤加深）
   double bossDropTimer = 8; // Boss 周期性掉道具
   double wobble = 0;
+  int skillIdx = 0; // Boss 当前技能索引（0/1 轮换）
+  double warnRadius = 240; // 技能预警圈半径
+  Color warnColor = const Color(0xFFFF5252); // 预警圈颜色
+  double stoneArmor = 0; // 石头王磐石护体剩余
+  double pounceT = 0; // 狼王扑击剩余
+  double pounceVx = 0, pounceVy = 0; // 狼王扑击速度
+  double iceRingR = 0; // 幽灵王冰环扩散半径（0=未扩散）
+  double blinkT = 0; // 幽灵王瞬移残影剩余
 
   Monster({
     required this.kind,
@@ -143,6 +151,8 @@ class Projectile {
   Offset origin = Offset.zero;
   bool crescent = false; // 剑气（月牙形）
   double angle = 0;
+  bool freeze = false; // 寒冰飞弹：命中减速
+  WeaponType? source; // 发射武器（用于伤害统计）
   Projectile({
     required this.x,
     required this.y,
@@ -161,6 +171,8 @@ class Projectile {
     this.origin = Offset.zero,
     this.crescent = false,
     this.angle = 0,
+    this.freeze = false,
+    this.source,
   });
 }
 
