@@ -24,7 +24,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build web --release
+      # GitHub Pages 部署在 /ball-evolution/ 子路径，必须设置 base-href 否则资源全部 404
+      - run: flutter build web --release --base-href=/ball-evolution/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
